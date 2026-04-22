@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Short Clips MVP</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f0; color: #1f1f1f; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .hero { background: #fff7df; border: 1px solid #e7d7a0; padding: 20px; border-radius: 16px; }
+    h1, h2, h3, p { margin-top: 0; }
+    form { display: grid; gap: 12px; margin-top: 16px; }
+    input, button { padding: 12px; border-radius: 10px; border: 1px solid #cfc7b1; font-size: 14px; }
+    button { background: #1f1f1f; color: white; cursor: pointer; }
+    .jobs { display: grid; gap: 16px; margin-top: 24px; }
+    .job { background: white; border-radius: 16px; border: 1px solid #ddd4bf; padding: 18px; }
+    .meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; }
+    .badge { padding: 4px 10px; border-radius: 999px; background: #ece7d8; }
+    .badge.ready { background: #d7f3dd; }
+    .badge.processing { background: #ffe9b8; }
+    .badge.failed { background: #ffd7d7; }
+    .clips { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 14px; }
+    video { width: 100%; border-radius: 12px; background: black; }
+    .copy { font-size: 14px; line-height: 1.4; }
+    .muted { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Short Clips MVP</h1>
+      <p>Upload manual ou link, transcrição, cortes automáticos, clipes 9:16, copy básica e status simples.</p>
+      <form action="/jobs" method="post" enctype="multipart/form-data">
+        <input type="url" name="video_url" placeholder="Cole um link de vídeo">
+        <input type="file" name="video_file" accept="video/*">
+        <button type="submit">Processar vídeo</button>
+      </form>
+    </section>
+
+    <section style="margin-top: 24px;">
+      <h2>Vídeos</h2>
+      <div id="jobs" class="jobs"></div>
+    </section>
+  </div>
+
+  <script>
+    const initialJobs = {{ jobs | tojson }};
+
+    function badgeClass(status) {
+      if (status === "ready") return "badge ready";
+      if (status === "processing") return "badge processing";
+      if (status === "failed") return "badge failed";
+      return "badge";
+    }
+
+    function renderClip(clip) {
+      return `
+        <div>
+          <video controls preload="metadata" src="${clip.url}"></video>
+          <div class="copy">
+            <p><strong>${clip.title || ""}</strong></p>
+            <p>${clip.caption || ""}</p>
+            <p class="muted">${clip.hashtags || ""}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderJob(job) {
+      const clipsHtml = (job.clips || []).map(renderClip).join("");
+      return `
+        <article class="job">
+          <div class="meta">
+            <span class="${badgeClass(job.status)}">${job.status}</span>
+            <span class="badge">${job.source_type}</span>
+            <span class="muted">${new Date(job.created_at + "Z").toLocaleString()}</span>
+          </div>
+          <h3>${job.title || "Aguardando processamento"}</h3>
+          <p>${job.caption || ""}</p>
+          <p class="muted">${job.hashtags || ""}</p>
+          ${job.error ? `<p style="color:#b00020;">${job.error}</p>` : ""}
+          ${clipsHtml ? `<div class="clips">${clipsHtml}</div>` : ""}
+        </article>
+      `;
+    }
+
+    function updateJobs(jobs) {
+      const root = document.getElementById("jobs");
+      root.innerHTML = jobs.map(renderJob).join("") || "<p class='muted'>Nenhum vídeo ainda.</p>";
+    }
+
+    async function poll() {
+      const response = await fetch("/api/jobs");
+      const payload = await response.json();
+      updateJobs(payload.jobs || []);
+    }
+
+    updateJobs(initialJobs);
+    setInterval(poll, 3000);
+  </script>
+</body>
+</html>
