@@ -2,6 +2,8 @@
 
 MVP monolítico para transformar um vídeo em clipes curtos prontos para publicação.
 
+CI básico via GitHub Actions valida sintaxe Python, build da imagem Docker e subida do app com `healthz`.
+
 O projeto recebe um vídeo por upload ou link, faz a transcrição, detecta bons momentos para corte, gera clipes verticais 9:16, cria copy básica e mostra o status do processamento em uma interface web simples.
 
 ## Escopo atual

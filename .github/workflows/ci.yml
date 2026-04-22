@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  python-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python files
+        run: python -m py_compile app.py processor.py
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t moneyclipper .
+
+      - name: Start container
+        run: docker run -d --name moneyclipper-test -p 8000:8000 moneyclipper
+
+      - name: Wait for app
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8000/healthz; then
+              exit 0
+            fi
+            sleep 3
+          done
+          docker logs moneyclipper-test
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f moneyclipper-test
