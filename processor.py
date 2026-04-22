@@ -2,11 +2,11 @@ import json
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
-from faster_whisper import WhisperModel
 from yt_dlp import YoutubeDL
 
-MODEL = None
+MODEL: Any | None = None
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "com", "da", "das", "de", "do", "dos",
     "e", "em", "for", "how", "in", "is", "isso", "it", "mais", "na", "no", "nos", "o", "of",
@@ -14,9 +14,15 @@ STOPWORDS = {
 }
 
 
-def get_model() -> WhisperModel:
+def get_model():
     global MODEL
     if MODEL is None:
+        try:
+            from faster_whisper import WhisperModel
+        except ImportError as exc:
+            raise RuntimeError(
+                "faster-whisper is not installed correctly. Check the project dependencies."
+            ) from exc
         MODEL = WhisperModel("small", device="cpu", compute_type="int8")
     return MODEL
 
